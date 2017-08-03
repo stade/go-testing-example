@@ -3,8 +3,6 @@ script {
   env.ORG = tokens[tokens.size()-3]
   env.REPO = tokens[tokens.size()-2]
   env.BRANCH = tokens[tokens.size()-1]
-  // env.GOWORKSPACE = "${env.WORKSPACE}" + "/" + "${env.BUILD_ID}" + "/go/src/" + "${env.REPO}"
-  // env.GOPATH = "${env.WORKSPACE}" + "/" + "${env.BUILD_ID}" + "/go"
 }
 
 pipeline {
@@ -51,9 +49,17 @@ pipeline {
     stage('test') {
       steps {
         dir("${env.GOWORKSPACE}") {
+          sh 'apt-get update && apt-get install -y mongodb'
+          sh 'service mongodb start'
+          sh '''mongo --quiet --eval  "printjson(db.adminCommand('listDatabases'))"'''
           sh 'go test'
         }
       }
+    }
+  }
+  post {
+    always {
+      sh "echo done!"
     }
   }
 }
