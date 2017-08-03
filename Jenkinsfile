@@ -1,34 +1,58 @@
+script {
+  tokens = "${env.JOB_NAME}".tokenize('/')
+  env.ORG = tokens[tokens.size()-3]
+  env.REPO = tokens[tokens.size()-2]
+  env.BRANCH = tokens[tokens.size()-1]
+  // env.GOWORKSPACE = "${env.WORKSPACE}" + "/" + "${env.BUILD_ID}" + "/go/src/" + "${env.REPO}"
+  // env.GOPATH = "${env.WORKSPACE}" + "/" + "${env.BUILD_ID}" + "/go"
+}
+
 pipeline {
   agent {
     docker {
-      image 'golang:1.9'
+      image 'comptel/golang-kafkaclient:1.8'
+    }
+  }
+
+  stages {
+    stage('get env') {
+      steps {
+        script {
+              sh 'env > env.txt'
+              String[] envs = readFile('env.txt').split("\r?\n")
+
+              for(String vars: envs){
+                  println(vars)
+              }
+          }
+      }
     }
 
-  }
-  stages {
-    stage('build') {
-      steps {
-        sh 'go build'
-      }
-    }
     stage('clone') {
       steps {
-        sh 'cd $BUILD_ID/go/src/ && git clone https://github.com/stade/go-testing-example.git'
+        script {
+          env.GOWORKSPACE = "${env.BUILD_ID}" + "/go/src/" + "${env.REPO}"
+          env.GOPATH = "${env.WORKSPACE}" + "/" + "${env.BUILD_ID}" + "/go"
+        }
+        dir("${env.GOWORKSPACE}") {
+          checkout scm
+        }
       }
     }
-    stage('export go path') {
-      steps {
-        sh 'cd $BUILD_ID/go && export GOPATH=$(pwd) && echo $GOPATH'
-      }
-    }
+
     stage('build') {
       steps {
-        sh 'cd $BUILD_ID/go/src/go-testing-example && go build'
+        dir("${env.GOWORKSPACE}") {
+          sh 'go build'
+        }
       }
     }
+
     stage('test') {
       steps {
-        sh 'cd $BUILD_ID/go/src/go-testing-example && go test'
+        dir("${env.GOWORKSPACE}") {
+          sh 'go test'
+        }
       }
     }
   }
