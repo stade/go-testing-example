@@ -56,6 +56,17 @@ pipeline {
         }
       }
     }
+
+    stage('ssh') {
+      steps {
+        script {
+          env.DEPLOYHOST = "hilla.kapsi.fi"
+          sshagent (credentials: ['ssh-demo-key']) {
+            sh 'ssh -o StrictHostKeyChecking=no tatutahv@$DEPLOYHOST uptime'
+          }
+        }
+      }
+    }
   }
   post {
     always {
