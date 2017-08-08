@@ -12,6 +12,12 @@ pipeline {
     }
   }
 
+  options {
+    skipDefaultCheckout()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    disableConcurrentBuilds()
+  }
+
   stages {
     stage('get env') {
       steps {
@@ -41,7 +47,7 @@ pipeline {
     stage('build') {
       steps {
         dir("${env.GOWORKSPACE}") {
-          sh 'go build'
+          sh 'cd $GOWORKSPACE && go build'
         }
       }
     }
@@ -52,7 +58,7 @@ pipeline {
           sh 'apt-get update && apt-get install -y mongodb'
           sh 'service mongodb start'
           sh '''mongo --quiet --eval  "printjson(db.adminCommand('listDatabases'))"'''
-          sh 'go test'
+          sh 'cd $GOWORKSPACE && go test'
         }
       }
     }
