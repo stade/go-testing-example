@@ -11,11 +11,15 @@ pipeline {
       image 'comptel/golang-kafkaclient:1.8'
     }
   }
+  triggers {
+    cron '@daily'
+  }
 
   options {
     skipDefaultCheckout()
     buildDiscarder(logRotator(numToKeepStr: '30'))
     disableConcurrentBuilds()
+    timeout(time: 10, unit: 'MINUTES')
   }
 
   stages {
@@ -63,17 +67,26 @@ pipeline {
       }
     }
 
+    stage('ready to deploy staging?') {
+      steps {
+        input "Ready to deploy ${env.REPO} to staging?"
+      }
+    }
+
     stage('ssh') {
       steps {
-        script {
-          env.DEPLOYHOST = "hilla.kapsi.fi"
-          sshagent (credentials: ['ssh-demo-key']) {
-            sh 'ssh -o StrictHostKeyChecking=no tatutahv@$DEPLOYHOST uptime'
+        retry(3) {
+          script {
+            env.DEPLOYHOST = "hilla.kapsi.fi"
+            sshagent (credentials: ['ssh-demo-key']) {
+              sh 'ssh -o StrictHostKeyChecking=no tatutahv@$DEPLOYHOST uptime'
+            }
           }
         }
       }
     }
   }
+
   post {
     always {
       sh "echo done!"
